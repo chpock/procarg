@@ -1,1 +1,1 @@
-package ifneeded procarg 0.0.1 [list source [file join $dir procarg.tcl]]
+package ifneeded procarg 1.0 [list source [file join $dir procarg.tcl]]
