@@ -32,7 +32,9 @@ proc procarg::regtype { type args } {
   variable paramtypes
 
   parse
+  ##nagelfar variable opts array
 
+  ##nagelfar ignore No braces around expression in if statement
   if { $opts(-expression) ne "" && [catch {set val 0; if $opts(-expression) {}} msg] } {
     return -code error "error while eval expression for custom argument type \"$type\": $msg"
   }
@@ -46,6 +48,7 @@ proc procarg::registerkey { func key type args } {
   variable paramtypes
 
   parse
+  ##nagelfar variable opts array
 
   if { [set idx [lsearch -glob $paramtypes ${type}*]] < 0 } {
     return -code error "${func}: unknown type $type while registering arguments.\nAllowed types: [string trim $paramtypes]"
@@ -67,7 +70,7 @@ proc procarg::registerkey { func key type args } {
   if { ![info exists opts(-allowempty)] } {
       if { $type in {string list dict} } {
           set opts(-allowempty) ignore
-      } {
+      } else {
           set opts(-allowempty) false
       }
   }
@@ -78,10 +81,13 @@ proc procarg::registerkey { func key type args } {
       double {
         foreach el $opts(-restrict) {
           if { [llength $el] == 1 } {
+            ##nagelfar ignore Non static subcommand to
             if { ![string is $type -strict $el] } {
               return -code error "${func}: error in declaration restrict of \"$key\", \"$el\" is not ${type}."
             }
           } elseif { [llength $el] == 2 } {
+            ##nagelfar ignore +3 Non static subcommand to
+            ##nagelfar ignore Non static subcommand to
             if { ([set l [lindex $el 0]] ne "-" && ![string is $type -strict $l]) \
                   || ([set h [lindex $el 1]] ne "+" && ![string is $type -strict $h]) } {
               return -code error "${func}: error in declaration restrict of \"$key\" range \"$el\"."
@@ -97,7 +103,7 @@ proc procarg::registerkey { func key type args } {
             if { [catch {llength $h} errmsg] } {
               return -code error "${func}: error in declaration restrict of \"$key\", \"$h\" is not correct list."
             }
-          } {
+          } else {
             if { $l eq "" || $l eq "-" } {
               set l 0
             } elseif { ![string is integer -strict $l] } {
@@ -122,7 +128,7 @@ proc procarg::registerkey { func key type args } {
       return -code error "${func}: error in declaration of default arguments.\n$msg"
     }
     set opts(-nodefault) false
-  } {
+  } else {
     set opts(-default) ""
     set opts(-nodefault) true
   }
@@ -136,7 +142,7 @@ proc procarg::register { func params } {
   if { [string range $func 0 1] ne "::" } {
     if { [set ns [uplevel 1 [list namespace current]]] eq "::" } {
       set func ::$func
-    } {
+    } else {
       set func ${ns}::[namespace tail $func]
     }
   }
@@ -172,7 +178,7 @@ proc procarg::parse { } {
   if { [string range [set func [lindex [info level -1] 0]] 0 1] ne "::" } {
     if { [set ns [uplevel 1 [list namespace current]]] eq "::" } {
       set func ::$func
-    } {
+    } else {
       set func ${ns}::[namespace tail $func]
     }
   }
@@ -185,21 +191,24 @@ proc procarg::parse { } {
     if { ![dict exists $box $func] } {
       if { $method eq {<constructor>} } {
         lassign [info class constructor $class] targs tbody
-      } {
+      } else {
         lassign [info class definition $class $method] targs tbody
       }
       set xargs [list]
       foreach targ $targs {
         if { [catch {llength $targ} _] || $_ != 2 || [lindex $targ 0] ne "args" } {
           lappend xargs $targ
-        } {
+        } else {
           uplevel 1 [list ::procarg::register ${class}::$method [lindex $targ 1]]
           lappend xargs "args"
         }
       }
       if { $method eq {<constructor>} } {
+        ##nagelfar ignore Non constant definition {"$class".} Skipping.
         ::oo::define $class [list constructor $xargs $tbody]
-      } {
+      } else {
+        ##nagelfar ignore +2 Non constant definition {"$class".} Skipping.
+        ##nagelfar ignore Found constant {"method"} which is also a variable.
         ::oo::define $class [list method $method $xargs $tbody]
       }
       unset targs xargs tbody
@@ -221,7 +230,7 @@ proc procarg::parse { } {
       lassign [dict get $box $func $key] type default restrict allowempty nodefault stripdash
       if { $type eq "switch" } {
         set val true
-      } {
+      } else {
         set val [lindex $a [incr idx]]
       }
       if { [catch {checkvalue $key $val $type $restrict $allowempty} msg] } {
@@ -232,7 +241,7 @@ proc procarg::parse { } {
       }
       if { $stripdash } {
         set o([string range $key 1 end]) $val
-      } {
+      } else {
         set o($key) $val
       }
     }
@@ -281,6 +290,7 @@ proc procarg::checkvalue { key val type restrict allowempty } {
     boolean -
     integer -
     double {
+      ##nagelfar ignore Non static subcommand to
       if { ![string is $type -strict $val] } {
         return -code error "$key \"$val\" is not $type value."
       }
@@ -298,7 +308,7 @@ proc procarg::checkvalue { key val type restrict allowempty } {
   }
   # simple custom type check
   if { [info exists regtypes($type)] && [lindex $regtypes($type) 0] ne "" } {
-    if { [catch {if [lindex $regtypes($type) 0] { set _ 0 } { set _ 1 } } msg] } {
+    if { [catch {if { [lindex $regtypes($type) 0] } { set _ 0 } else { set _ 1 } } msg] } {
       return -code error "$key \"$val\" type check expression failed: $msg"
     } elseif { $msg } {
       return -code error "$key \"$val\" [lindex $regtypes($type) 1]"
@@ -308,7 +318,8 @@ proc procarg::checkvalue { key val type restrict allowempty } {
   if { $restrict eq "" } { return $val }
   if { [lindex $restrict 0] eq "script" } {
     if { [set expression [lindex $restrict 1]] ne "" } {
-      if { [catch {if $expression { set _ 0 } { set _ 1 } } msg] } {
+      ##nagelfar ignore No braces around expression in if statement.
+      if { [catch {if $expression { set _ 0 } else { set _ 1 } } msg] } {
         return -code error "$key \"$val\" restrict expression failed: $msg"
       } elseif { $msg } {
         if { [set errstr [lindex $restrict 2]] eq "" } {
@@ -317,7 +328,7 @@ proc procarg::checkvalue { key val type restrict allowempty } {
         return -code error "$key \"$val\" $errstr"
       }
     }
-  } {
+  } else {
     switch -- $type {
       string {
         if { [lsearch -exact $restrict $val] < 0 } {
@@ -373,23 +384,26 @@ procarg::register ::procarg::regtype {
 if { [info commands ::procarg::proc] eq "" } {
   rename proc ::procarg::proc
 }
+##nagelfar syntax ::procarg::proc dp
+
 ::procarg::proc proc { name arg body } {
   set xarg [list]
   if { [catch {llength $arg} _] || !$_ } {
     set xarg $arg
-  } {
+  } else {
     foreach a $arg {
       if { [catch {llength $a} _] || $_ != 2 || [lindex $a 0] ne "args" } {
         if { [string match {&*} $a] } {
           append xbody "upvar 1 \${$a} [string range $a 1 end];"
         }
         lappend xarg $a
-      } {
+      } else {
         uplevel 1 [list ::procarg::register $name [lindex $a 1]]
         append xbody {::procarg::parse;}
         lappend xarg "args"
       }
     }
   }
+  ##nagelfar ignore Non constant argument to proc {"$name".} Skipping.
   tailcall ::procarg::proc $name $xarg [append xbody $body]
 }
