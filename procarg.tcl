@@ -64,7 +64,7 @@ proc procarg::registerkey { func key type args } {
   if { $type eq "switch" } {
     set opts(-default) false
   }
-  if { ![info exists opts(-allowempty)] {
+  if { ![info exists opts(-allowempty)] } {
       if { $type in {string list dict} } {
           set opts(-allowempty) ignore
       } {
