@@ -17,12 +17,14 @@ namespace eval procarg {
   namespace export *
   namespace ensemble create
   set box [dict create ::procarg::registerkey [list \
-      -default    [list string  ""     ""     ignore true  false] \
-      -nodefault  [list switch  false  ""     false  true  false] \
-      -restrict   [list string  ""     ""     ignore false false] \
-      -allowempty [list boolean ignore ""     false  true  false] \
-      -stripdash  [list switch  false  ""     false  false false] \
-      __cache [list -restrict "" -stripdash false]]]
+      -default    [list string  ""     ""     ignore true  false false] \
+      -nodefault  [list switch  ""     ""     false  true  false false] \
+      -restrict   [list string  ""     ""     ignore false false false] \
+      -allowempty [list boolean ""     ""     false  true  false false] \
+      -stripdash  [list switch  false  ""     false  false false false] \
+      -required   [list switch  false  ""     false  false false false] \
+      __cache [list -restrict "" -stripdash false -required false] \
+  ]]
 }
 
 proc procarg::regtype { type args } {
@@ -124,7 +126,7 @@ proc procarg::registerkey { func key type args } {
     set opts(-default) ""
     set opts(-nodefault) true
   }
-  dict set box $func $key [list $type $opts(-default) $opts(-restrict) $opts(-allowempty) $opts(-nodefault) $opts(-stripdash)]
+  dict set box $func $key [list $type $opts(-default) $opts(-restrict) $opts(-allowempty) $opts(-nodefault) $opts(-stripdash) $opts(-required)]
 }
 
 proc procarg::register { func params } {
@@ -236,28 +238,25 @@ proc procarg::parse { } {
     }
   }
 
-  # additional check for allowempty
-  #dict for { key val } $tempkeys {
-  #  lassign $val type default restrict allowempty nodefault stripdash
-  #  if { $allowempty eq "ignore" || $allowempty } continue
-  #  # ignore -allowempty for arguments 0-9, they check below
-  #  if { [string match {[0-9]} $key] } continue
-  #  if { $stripdash } {
-  #    set key_temp [string range $key 1 end]
-  #  } {
-  #    set key_temp $key
-  #  }
-  #  if { ![info exists o($key)] || $o($key) eq "" } {
-  #    return -code error "${func}: error while parse arguments\n$key not allowed to be empty."
-  #  }
-  #}
+  dict for { key val } $tempkeys {
+      # idx for 'required' flag is 6
+      if { ![lindex $val 6] } continue
+      set rkey $key
+      # idx for 'stripdash' flag is 5
+      if { [lindex $val 5] } {
+          set rkey [string range $rkey 1 end]
+      }
+      if { ![info exists o($rkey)] } {
+        return -level 2 -code error "${func}: error while parse arguments: required option '$key' is not specified"
+      }
+  }
 
   foreach idx [dict keys [dict get $box $func] {[0-9]}] {
     if { [set key [lindex [info args $func] $idx]] eq "" } {
       return -level 2 -code error "${func}: not found defined proc argument #${idx}."
     }
     set val [uplevel 1 [list set $key]]
-    lassign [dict get $box $func $idx] type default restrict allowempty nodefault stripdash
+    lassign [dict get $box $func $idx] type default restrict allowempty
     if { [catch {checkvalue $key $val $type $restrict $allowempty} msg] } {
       return -level 2 -code error "${func}: error while parse arguments\n$msg"
     }
