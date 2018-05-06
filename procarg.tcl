@@ -239,6 +239,8 @@ proc procarg::parse { } {
   }
 
   dict for { key val } $tempkeys {
+      # don't process native arguments
+      if { [string match {[0-9]} $key] } continue
       # idx for 'required' flag is 6
       if { ![lindex $val 6] } continue
       set rkey $key
