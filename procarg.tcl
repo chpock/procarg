@@ -35,11 +35,11 @@ proc procarg::regtype { type args } {
   ##nagelfar variable opts array
 
   ##nagelfar ignore No braces around expression in if statement
-  if { $opts(-expression) ne "" && [catch {set val 0; if $opts(-expression) {}} msg] } {
+  if { [info exists opts(-expression)] && [catch {set val 0; if $opts(-expression) {}} msg] } {
     return -code error "error while eval expression for custom argument type \"$type\": $msg"
   }
   if { [lsearch -exact $paramtypes $type] < 0 } { lappend paramtypes $type }
-  if { $opts(-errormsg) eq "" } { set opts(-errormsg) "is not correct ${type}." }
+  if { [info exists opts(-errormsg)] } { set opts(-errormsg) "is not correct ${type}." }
   set regtypes($type) [list $opts(-expression) $opts(-errormsg)]
 }
 
