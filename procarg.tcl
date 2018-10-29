@@ -39,7 +39,7 @@ proc procarg::regtype { type args } {
     return -code error "error while eval expression for custom argument type \"$type\": $msg"
   }
   if { [lsearch -exact $paramtypes $type] < 0 } { lappend paramtypes $type }
-  if { [info exists opts(-errormsg)] } { set opts(-errormsg) "is not correct ${type}." }
+  if { ![info exists opts(-errormsg)] } { set opts(-errormsg) "is not correct ${type}." }
   set regtypes($type) [list $opts(-expression) $opts(-errormsg)]
 }
 
@@ -377,8 +377,8 @@ proc procarg::checkvalue { key val type restrict allowempty } {
 }
 
 procarg::register ::procarg::regtype {
-  {-expression string}
-  {-errormsg string}
+  {-expression string -default ""}
+  {-errormsg   string}
 }
 
 if { [info commands ::procarg::proc] eq "" } {
