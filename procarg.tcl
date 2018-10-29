@@ -308,7 +308,7 @@ proc procarg::checkvalue { key val type restrict allowempty } {
   }
   # simple custom type check
   if { [info exists regtypes($type)] && [lindex $regtypes($type) 0] ne "" } {
-    if { [catch {if { [eval [lindex $regtypes($type) 0]] } { set _ 0 } else { set _ 1 } } msg] } {
+    if { [catch {if "[lindex $regtypes($type) 0]" { set _ 0 } else { set _ 1 } } msg] } {
       return -code error "$key \"$val\" type check expression failed: $msg"
     } elseif { $msg } {
       return -code error "$key \"$val\" [lindex $regtypes($type) 1]"
