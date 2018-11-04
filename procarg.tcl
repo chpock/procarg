@@ -170,6 +170,66 @@ proc procarg::register { func params } {
   return ""
 }
 
+proc procarg::registerclass { class } {
+  variable box
+
+  if { [string range $class 0 1] ne "::" } {
+    if { [set ns [uplevel 1 [list namespace current]]] eq "::" } {
+      set class ::$class
+    } else {
+      set class ${ns}::[namespace tail $class]
+    }
+  }
+
+  foreach method [info class methods $class -private] {
+
+    set func "${class}::$method"
+
+    if { ![dict exists $box $func] } {
+
+      if { $method eq {<constructor>} } {
+        if { [catch {
+          lassign [info class constructor $class] targs tbody
+        }] } continue
+      } else {
+        if { [catch {
+          lassign [info class definition $class $method] targs tbody
+        }] } continue
+      }
+
+      set xargs [list]
+      set xbody ""
+
+      foreach a $targs {
+        if { [catch {llength $a} _] || $_ != 2 || [lindex $a 0] ne "args" } {
+          if { [string match {&*} $a] } {
+            append xbody "upvar 1 \${$a} [string range $a 1 end];"
+          }
+          lappend xargs $a
+        } else {
+          uplevel 1 [list ::procarg::register $func [lindex $a 1]]
+          append xbody {::procarg::parse;}
+          lappend xargs "args"
+        }
+      }
+
+      if { $xbody eq "" } continue
+
+      if { $method eq {<constructor>} } {
+        ##nagelfar ignore Non constant definition {"$class".} Skipping.
+        ::oo::define $class [list constructor $xargs $tbody]
+      } else {
+        ##nagelfar ignore +2 Non constant definition {"$class".} Skipping.
+        ##nagelfar ignore Found constant {"method"} which is also a variable.
+        ::oo::define $class [list method $method $xargs $tbody]
+      }
+
+    }
+
+  }
+
+}
+
 proc procarg::parse { } {
   variable box
 
@@ -308,7 +368,7 @@ proc procarg::checkvalue { key val type restrict allowempty } {
   }
   # simple custom type check
   if { [info exists regtypes($type)] && [lindex $regtypes($type) 0] ne "" } {
-    if { [catch {if "[lindex $regtypes($type) 0]" { set _ 0 } else { set _ 1 } } msg] } {
+    if { [catch {if { [eval [lindex $regtypes($type) 0]] } { set _ 0 } else { set _ 1 } } msg] } {
       return -code error "$key \"$val\" type check expression failed: $msg"
     } elseif { $msg } {
       return -code error "$key \"$val\" [lindex $regtypes($type) 1]"
@@ -381,9 +441,16 @@ procarg::register ::procarg::regtype {
   {-errormsg   string}
 }
 
-if { [info commands ::procarg::proc] eq "" } {
+if { ![llength [info commands ::procarg::proc]] } {
   rename proc ::procarg::proc
 }
+if { "procarg_create" ni [info class methods ::oo::class] } {
+  ::oo::define ::oo::class { renamemethod create procarg_create }
+}
+if { ![llength [info commands ::procarg::oo_define]] } {
+  rename ::oo::define ::procarg::oo_define
+}
+
 ##nagelfar syntax ::procarg::proc dp
 
 ::procarg::proc proc { name arg body } {
@@ -406,4 +473,23 @@ if { [info commands ::procarg::proc] eq "" } {
   }
   ##nagelfar ignore Non constant argument to proc {"$name".} Skipping.
   tailcall ::procarg::proc $name $xarg [append xbody $body]
+}
+
+##nagelfar ignore Procedure {"oo::define"} does not match previous definition
+proc ::oo::define { args } {
+  set res [uplevel 1 [list ::procarg::oo_define {*}$args]]
+  if { [lindex $args 0] ne "" } {
+    uplevel 1 [list ::procarg::registerclass [lindex $args 0]]
+  }
+  return $res
+}
+
+::oo::define ::oo::class {
+  method create { args } {
+    set res [uplevel 1 [list ::oo::class procarg_create {*}$args]]
+    if { [lindex $args 0] ne "" } {
+      uplevel 1 [list ::procarg::registerclass [lindex $args 0]]
+    }
+    return $res
+  }
 }
