@@ -217,11 +217,11 @@ proc procarg::registerclass { class } {
 
       if { $method eq {<constructor>} } {
         ##nagelfar ignore Non constant definition {"$class".} Skipping.
-        ::oo::define $class [list constructor $xargs $tbody]
+        ::oo::define $class [list constructor $xargs [append xbody $tbody]]
       } else {
         ##nagelfar ignore +2 Non constant definition {"$class".} Skipping.
         ##nagelfar ignore Found constant {"method"} which is also a variable.
-        ::oo::define $class [list method $method $xargs $tbody]
+        ::oo::define $class [list method $method $xargs [append xbody $tbody]]
       }
 
     }
