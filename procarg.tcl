@@ -27,6 +27,32 @@ namespace eval procarg {
   ]]
 }
 
+proc procarg::getregistration { func } {
+  variable box
+
+  if { [string range $func 0 1] ne "::" } {
+    if { ![catch [list uplevel 1 [list self call]] class] } {
+      set class [lindex [lindex $class 0] [lindex $class 1]]
+      set class [lindex $class 2]
+      set func ${class}::$func
+    } else {
+      if { [set ns [uplevel 1 [list namespace current]]] eq "::" } {
+        set func ::$func
+      } else {
+        set func ${ns}::[namespace tail $func]
+      }
+    }
+  }
+
+  if { ![dict exists $box $func] } { return -code error "arguments for $func not registered yet." }
+
+  set o [dict get $box $func]
+  dict unset o __cache
+
+  return $o
+
+}
+
 proc procarg::regtype { type args } {
   variable regtypes
   variable paramtypes
