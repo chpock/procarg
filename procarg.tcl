@@ -207,7 +207,9 @@ proc procarg::registerclass { class } {
     }
   }
 
-  foreach method [info class methods $class -private] {
+  set methods [concat [info class methods $class -private] [list <constructor>]]
+
+  foreach method $methods {
 
     set func "${class}::$method"
 
@@ -470,9 +472,6 @@ procarg::register ::procarg::regtype {
 if { ![llength [info commands ::procarg::proc]] } {
   rename proc ::procarg::proc
 }
-if { "procarg_create" ni [info class methods ::oo::class] } {
-  ::oo::define ::oo::class { renamemethod create procarg_create }
-}
 if { ![llength [info commands ::procarg::oo_define]] } {
   rename ::oo::define ::procarg::oo_define
 }
@@ -508,14 +507,4 @@ proc ::oo::define { args } {
     uplevel 1 [list ::procarg::registerclass [lindex $args 0]]
   }
   return $res
-}
-
-::oo::define ::oo::class {
-  method create { args } {
-    set res [uplevel 1 [list ::oo::class procarg_create {*}$args]]
-    if { [lindex $args 0] ne "" } {
-      uplevel 1 [list ::procarg::registerclass [lindex $args 0]]
-    }
-    return $res
-  }
 }
