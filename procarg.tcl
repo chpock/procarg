@@ -10,7 +10,7 @@ package provide procarg 1.0.1
 
 namespace eval procarg {
   variable box
-  variable paramtypes {string boolean integer double switch list dict}
+  variable paramtypes {string boolean integer double switch list dict args}
   variable regtypes
   array set regtypes [list]
 
@@ -316,7 +316,10 @@ proc procarg::parse { } {
       set key [lindex $a $idx]
       if { ![dict exists $box $func $key] } { return -level 2 -code error "${func}: unknown option $key, must be one of: [dict keys [dict get $box $func] -*]" }
       lassign [dict get $box $func $key] type default restrict allowempty nodefault stripdash
-      if { $type eq "switch" } {
+      if { $type eq "args" } {
+          lappend a {*}[lindex $a [incr idx]]
+          continue
+      } elseif { $type eq "switch" } {
         set val true
       } else {
         set val [lindex $a [incr idx]]
