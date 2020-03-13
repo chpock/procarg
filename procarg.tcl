@@ -1,10 +1,8 @@
 # procarg - parsing named arguments for procedures
-# Copyright (C) 2018 Konstantin Kushnir <chpock@gmail.com>
+# Copyright (C) 2018-2020 Kostiantyn Kushnir <chpock@gmail.com>
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# See the file "LICENSE" for information on usage and redistribution of
+# this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
 package provide procarg 1.0.1
 
